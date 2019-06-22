@@ -200,7 +200,7 @@ class RLS:
         
         self.x = np.array([]) #buffer x
         
-        self.W = np.array([np.zeros(self.M)] * (self.M - 1)) #filter coefficients - array of arrays of M coefficients
+        self.W = np.array([np.zeros((self.M, 1))] * (self.M - 1)) #filter coefficients - array of columns of M coefficients
         self.y_ = np.zeros(self.M - 1) #filter output
         self.e = np.array([]) #filter error
         
@@ -243,16 +243,16 @@ class RLS:
         -------
         None
         """
-        X = np.flip(self.x, axis=0) #X[n]
+        phi = np.flip(self.x, axis=0).reshape((self.M, 1)) #phi[n]
         
-        self.y_ = np.append(self.y_, np.dot(X, self.W[-1])) #y_[n]
+        self.y_ = np.append(self.y_, np.matmul(self.W[-1].T, phi)[0,0]) #y_[n]
         self.e = np.append(self.e, d - self.y_[-1]) #e[n]
         
-        k = matmul(self.P, X.T) / (self.L + matmul(matmul(X, self.P), X.T))
+        k = matmul(self.P, phi) / (self.L + matmul(matmul(phi.T, self.P), phi))
         
         W_new = [self.W[-1] + k * self.e[-1]] #W[n+1]
         self.W = np.concatenate((self.W, W_new))
         
-        self.P = (1 / self.L) * matmul((eye(self.M) - matmul(k, X)), self.P) #update P
+        self.P = self.L ** (-1) * matmul((eye(self.M) - matmul(k, phi.T)), self.P) #update P
         
         self.x = np.delete(self.x, 0) #delete oldest buffer element
